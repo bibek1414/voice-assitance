@@ -219,6 +219,7 @@
             margin-top: 5px;
         }
     </style>
+    <script src="config.js"></script>
 </head>
 <body>
     <div class="container">
@@ -438,8 +439,53 @@
             
             // Weather inquiry (simulated)
             else if (command.includes("weather")) {
-                respond("I don't have access to real-time weather data, but I can set that up to connect to a weather API.");
+    // Check if CONFIG is defined and has a valid API key
+    if (typeof CONFIG === 'undefined' || !CONFIG.WEATHER_API_KEY) {
+        respond("Weather feature is not configured. Please add your API key to the config file.");
+        return;
+    }
+    
+    // Check if a location is specified
+    let location = "Kathmandu"; // Default city
+    
+    // Try to extract location from command
+    const locationMatches = command.match(/weather (?:in|for|at) (.+)/i);
+    if (locationMatches && locationMatches[1]) {
+        location = locationMatches[1].trim();
+    }
+    
+    getWeatherData(location);
+}
+
+// Add this function to get weather data
+function getWeatherData(city) {
+    respond(`Getting weather for ${city}...`);
+    
+    const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&units=metric&appid=${CONFIG.WEATHER_API_KEY}`;
+    
+    fetch(url)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Weather API error: ${response.status}`);
             }
+            return response.json();
+        })
+        .then(data => {
+            const temp = Math.round(data.main.temp);
+            const tempF = Math.round(temp * 9/5 + 32);
+            const condition = data.weather[0].description;
+            const humidity = data.main.humidity;
+            const windSpeed = data.wind.speed;
+            
+            const weatherResponse = `The current weather in ${data.name} is ${condition} with a temperature of ${temp}°C (${tempF}°F). The humidity is ${humidity}% and wind speed is ${windSpeed} meters per second.`;
+            
+            respond(weatherResponse);
+        })
+        .catch(error => {
+            console.error('Weather fetch error:', error);
+            respond(`I'm sorry, I couldn't get weather information for ${city}. Please try again or try another city.`);
+        });
+}
             
             // Scheduling tasks
             else if (command.includes("schedule") || command.includes("remind") || command.includes("set reminder")) {
